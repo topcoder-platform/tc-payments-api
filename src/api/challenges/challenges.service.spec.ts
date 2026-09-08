@@ -2,6 +2,9 @@ import { ChallengeStatuses } from '../../dto/challenge.dto';
 
 jest.mock('src/config', () => ({
   ENV_CONFIG: {
+    // Deliberately not the 100 default, so the tests prove the screener fee is
+    // read from the environment config.
+    DESIGN_SCREENER_FEE: 75,
     TGBillingAccounts: [],
     TOPCODER_API_V6_BASE_URL: 'https://api.topcoder-dev.com/v6',
   },
@@ -244,16 +247,17 @@ describe('ChallengesService', () => {
 
   it.each([
     {
-      label: 'pays the flat screener fee for design challenge screening',
+      label: 'pays the configured screener fee for design challenge screening',
       track: 'Design',
       phaseName: 'Screening',
-      expectedAmount: 100,
+      expectedAmount: 75,
     },
     {
-      label: 'pays the flat screener fee for uppercase design track token',
+      label:
+        'pays the configured screener fee for uppercase design track token',
       track: 'DESIGN',
       phaseName: 'Screening',
-      expectedAmount: 100,
+      expectedAmount: 75,
     },
     {
       label: 'keeps coefficient based amount for design challenge review',

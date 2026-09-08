@@ -218,6 +218,18 @@ All environment variables should be defined in a `.env` file in the project root
 - **Values**: `true` or `false`
 - **Notes**: When false, uses default memo
 
+### Challenge Payment Configuration
+
+#### `DESIGN_SCREENER_FEE`
+
+- **Type**: Number (Decimal)
+- **Required**: No
+- **Description**: Flat fee in USD paid to the screener of a Design track challenge
+- **Example**: `100`
+- **Default**: `100`
+- **Notes**: Overrides the coefficient based reviewer payment amount for the
+  Screening phase of Design track challenges only
+
 ### Email Configuration
 
 #### `TC_EMAIL_NOTIFICATIONS_TOPIC`

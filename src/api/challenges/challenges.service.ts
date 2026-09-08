@@ -80,11 +80,14 @@ const CANCELLED_CHALLENGE_STATUSES = [
 
 const DESIGN_TRACK = 'DESIGN';
 const SCREENING_PHASE_NAME = 'screening';
-// Design challenge screeners are paid a flat fee, regardless of the payment
-// coefficients configured on the challenge reviewer entry.
-const DESIGN_SCREENER_FIXED_FEE = 100;
 
-const { TOPCODER_API_V6_BASE_URL: TC_API_BASE, TGBillingAccounts } = ENV_CONFIG;
+const {
+  TOPCODER_API_V6_BASE_URL: TC_API_BASE,
+  TGBillingAccounts,
+  // Design challenge screeners are paid this flat fee, regardless of the
+  // payment coefficients configured on the challenge reviewer entry.
+  DESIGN_SCREENER_FEE,
+} = ENV_CONFIG;
 
 /**
  * Determines whether a challenge status represents a cancelled challenge.
@@ -504,7 +507,7 @@ export class ChallengesService {
               isScreeningPhase(phaseReviews[0].phaseName);
 
             const amount = isDesignScreening
-              ? DESIGN_SCREENER_FIXED_FEE
+              ? DESIGN_SCREENER_FEE
               : Math.ceil(
                   (challengeReviewer.fixedAmount ?? 0) +
                     (challengeReviewer.baseCoefficient ?? 0) * firstPlacePrize +
