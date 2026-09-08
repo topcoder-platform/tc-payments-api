@@ -242,6 +242,81 @@ describe('ChallengesService', () => {
     ]);
   });
 
+  it.each([
+    {
+      label: 'pays the flat screener fee for design challenge screening',
+      track: 'Design',
+      phaseName: 'Screening',
+      expectedAmount: 100,
+    },
+    {
+      label: 'pays the flat screener fee for uppercase design track token',
+      track: 'DESIGN',
+      phaseName: 'Screening',
+      expectedAmount: 100,
+    },
+    {
+      label: 'keeps coefficient based amount for design challenge review',
+      track: 'Design',
+      phaseName: 'Review',
+      expectedAmount: 10,
+    },
+    {
+      label: 'keeps coefficient based amount for non-design screening',
+      track: 'Development',
+      phaseName: 'Screening',
+      expectedAmount: 10,
+    },
+  ])('$label', async ({ track, phaseName, expectedAmount }) => {
+    const service = new ChallengesService(
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+    );
+
+    jest.spyOn(service, 'getChallengeReviews').mockResolvedValue([
+      {
+        phaseId: 'phase-resource-1',
+        phaseName,
+        reviewerHandle: 'screener1',
+      },
+    ] as any);
+
+    const payments = await service.generateReviewersPayments(
+      {
+        id: '11111111-1111-1111-1111-111111111111',
+        name: 'Design Screening Challenge',
+        track,
+        prizeSets: [
+          { type: 'PLACEMENT', prizes: [{ type: PrizeType.USD, value: 500 }] },
+        ],
+        reviewers: [
+          {
+            isMemberReview: true,
+            phaseId: 'screening-phase-1',
+            fixedAmount: 10,
+          },
+        ],
+        phases: [{ id: 'phase-resource-1', phaseId: 'screening-phase-1' }],
+      } as any,
+      [
+        {
+          memberHandle: 'screener1',
+          memberId: 123,
+        },
+      ] as any,
+    );
+
+    expect(payments).toEqual([
+      expect.objectContaining({
+        amount: expectedAmount,
+        type: WinningsCategory.REVIEW_BOARD_PAYMENT,
+      }),
+    ]);
+  });
+
   it('defaults TAAS task challenge winnings to OWED status', async () => {
     const service = new ChallengesService(
       {} as any,

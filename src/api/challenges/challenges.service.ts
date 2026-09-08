@@ -78,6 +78,12 @@ const CANCELLED_CHALLENGE_STATUSES = [
   ChallengeStatuses.CancelledPaymentFailed,
 ].map((status) => status.toLowerCase());
 
+const DESIGN_TRACK = 'DESIGN';
+const SCREENING_PHASE_NAME = 'screening';
+// Design challenge screeners are paid a flat fee, regardless of the payment
+// coefficients configured on the challenge reviewer entry.
+const DESIGN_SCREENER_FIXED_FEE = 100;
+
 const { TOPCODER_API_V6_BASE_URL: TC_API_BASE, TGBillingAccounts } = ENV_CONFIG;
 
 /**
@@ -91,6 +97,27 @@ function isCancelledChallengeStatus(status?: string): boolean {
   return status
     ? CANCELLED_CHALLENGE_STATUSES.includes(status.toLowerCase())
     : false;
+}
+
+/**
+ * Determines whether a challenge belongs to the Design track.
+ *
+ * @param track Challenge track display value or token returned by challenge-api-v6.
+ * @returns True when the track is the Design track.
+ */
+function isDesignTrack(track?: string): boolean {
+  return (track ?? '').trim().toUpperCase() === DESIGN_TRACK;
+}
+
+/**
+ * Determines whether a challenge phase is the screening phase handled by the
+ * challenge screener.
+ *
+ * @param phaseName Phase name returned by challenge-api-v6.
+ * @returns True when the phase is the screening phase.
+ */
+function isScreeningPhase(phaseName?: string): boolean {
+  return (phaseName ?? '').trim().toLowerCase() === SCREENING_PHASE_NAME;
 }
 
 @Injectable()
@@ -468,16 +495,28 @@ export class ChallengesService {
               currency,
             );
 
+            // Design challenge screeners are always paid the flat screener fee
+            // instead of the coefficient based amount, which resolves to $0
+            // when no payment coefficients are configured for the phase.
+            const isDesignScreening =
+              currency === PrizeType.USD &&
+              isDesignTrack(challenge.track) &&
+              isScreeningPhase(phaseReviews[0].phaseName);
+
+            const amount = isDesignScreening
+              ? DESIGN_SCREENER_FIXED_FEE
+              : Math.ceil(
+                  (challengeReviewer.fixedAmount ?? 0) +
+                    (challengeReviewer.baseCoefficient ?? 0) * firstPlacePrize +
+                    (challengeReviewer.incrementalCoefficient ?? 0) *
+                      firstPlacePrize *
+                      phaseReviews.length,
+                );
+
             return {
               handle: reviewer.memberHandle,
               userId: reviewer.memberId.toString(),
-              amount: Math.ceil(
-                (challengeReviewer.fixedAmount ?? 0) +
-                  (challengeReviewer.baseCoefficient ?? 0) * firstPlacePrize +
-                  (challengeReviewer.incrementalCoefficient ?? 0) *
-                    firstPlacePrize *
-                    phaseReviews.length,
-              ),
+              amount,
               type: winType,
               currency: placementPrizes?.[0]?.type ?? PrizeType.USD,
               ...(status ? { status } : {}),
