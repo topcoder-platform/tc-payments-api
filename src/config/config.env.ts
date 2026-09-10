@@ -119,6 +119,11 @@ export class ConfigEnv {
   @IsString()
   SENDGRID_TEMPLATE_ID_OTP_CODE: string = 'd-2d0ab9f6c9cc4efba50080668a9c35c1';
 
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
+  DESIGN_SCREENER_FEE: number = 100;
+
   @IsInt({ each: true })
   TGBillingAccounts = [80000062, 80002800];
 

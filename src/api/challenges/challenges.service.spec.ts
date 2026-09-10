@@ -2,6 +2,9 @@ import { ChallengeStatuses } from '../../dto/challenge.dto';
 
 jest.mock('src/config', () => ({
   ENV_CONFIG: {
+    // Deliberately not the 100 default, so the tests prove the screener fee is
+    // read from the environment config.
+    DESIGN_SCREENER_FEE: 75,
     TGBillingAccounts: [],
     TOPCODER_API_V6_BASE_URL: 'https://api.topcoder-dev.com/v6',
   },
@@ -238,6 +241,82 @@ describe('ChallengesService', () => {
     expect(payments).toEqual([
       expect.objectContaining({
         type: WinningsCategory.TOPGEAR_PAYMENT,
+      }),
+    ]);
+  });
+
+  it.each([
+    {
+      label: 'pays the configured screener fee for design challenge screening',
+      track: 'Design',
+      phaseName: 'Screening',
+      expectedAmount: 75,
+    },
+    {
+      label:
+        'pays the configured screener fee for uppercase design track token',
+      track: 'DESIGN',
+      phaseName: 'Screening',
+      expectedAmount: 75,
+    },
+    {
+      label: 'keeps coefficient based amount for design challenge review',
+      track: 'Design',
+      phaseName: 'Review',
+      expectedAmount: 10,
+    },
+    {
+      label: 'keeps coefficient based amount for non-design screening',
+      track: 'Development',
+      phaseName: 'Screening',
+      expectedAmount: 10,
+    },
+  ])('$label', async ({ track, phaseName, expectedAmount }) => {
+    const service = new ChallengesService(
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+    );
+
+    jest.spyOn(service, 'getChallengeReviews').mockResolvedValue([
+      {
+        phaseId: 'phase-resource-1',
+        phaseName,
+        reviewerHandle: 'screener1',
+      },
+    ] as any);
+
+    const payments = await service.generateReviewersPayments(
+      {
+        id: '11111111-1111-1111-1111-111111111111',
+        name: 'Design Screening Challenge',
+        track,
+        prizeSets: [
+          { type: 'PLACEMENT', prizes: [{ type: PrizeType.USD, value: 500 }] },
+        ],
+        reviewers: [
+          {
+            isMemberReview: true,
+            phaseId: 'screening-phase-1',
+            fixedAmount: 10,
+          },
+        ],
+        phases: [{ id: 'phase-resource-1', phaseId: 'screening-phase-1' }],
+      } as any,
+      [
+        {
+          memberHandle: 'screener1',
+          memberId: 123,
+        },
+      ] as any,
+    );
+
+    expect(payments).toEqual([
+      expect.objectContaining({
+        amount: expectedAmount,
+        type: WinningsCategory.REVIEW_BOARD_PAYMENT,
       }),
     ]);
   });
